@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>DARAN INTEGRATED HELPER (รร.๔ & ตม.30)</title>
+    
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <!-- Libraries ประมวลผล CSV และ Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --panel-bg: rgba(255, 255, 255, 0.85);
+            --panel-border: rgba(147, 51, 234, 0.2);
+            --primary-purple: #8b5cf6;
+            --accent-glow: #a78bfa;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --accent-green: #16a34a;
+        }
+
+        body { 
+            font-family: 'Sarabun', 'Segoe UI', sans-serif; 
+            padding: 30px 20px; 
+            line-height: 1.6; 
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* 🔒 ส่วนของการสร้างลายน้ำ (Watermark Background) ทับทั่วหน้าเว็บ */
+        body::before {
+            content: "Daran's Property!!!";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9999; /* ให้อยู่ด้านบนสุดเพื่อกันการแคปหน้าจอ */
+            pointer-events: none; /* เพื่อให้พนักงานยังคลิกปุ่มและพิมพ์ตารางทะลุลายน้ำได้ปกติ */
+            color: rgba(255, 0, 0, 0.05); /* สีแดงแบบโปร่งแสงมากๆ 5% เพื่อไม่ให้รบกวนสายตาคนทำงาน */
+            font-size: 38px;
+            font-family: 'Kanit', sans-serif;
+            font-weight: bold;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-content: center;
+            transform: rotate(-30deg) scale(1.2); /* เอียงลายน้ำ 30 องศา */
+            overflow: hidden;
+            
+            /* ใช้เทคนิค Repeat ข้อความให้เต็มจอ */
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='450' height='200' viewBox='0 0 450 200'><text x='20' y='100' fill='rgba(255, 0, 0, 0.06)' font-size='22' font-family='Arial' font-weight='bold' transform='rotate(-25 150 100)'>Daran's Property!!! COPY IS A SHAME!</text></svg>");
+            background-repeat: repeat;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 25px;
+            max-width: 1700px;
+            margin: 0 auto;
+        }
+
+        .sidebar {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 24px;
+            padding: 30px 20px;
+            backdrop-filter: blur(16px);
+            height: fit-content;
+            box-shadow: 0 10px 30px rgba(148, 163, 184, 0.15);
+        }
+
+        h2, h3 { 
+            font-family: 'Kanit', sans-serif;
+            color: #4c1d95; 
+            margin-top: 0;
+            font-weight: 600;
+        }
+
+        .subtitle { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 25px; }
+
+        .tab-container {
+            display: flex;
+            background: #f1f5f9;
+            padding: 5px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: transparent;
+            color: var(--text-muted);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Kanit', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .tab-btn:hover { background: rgba(0,0,0,0.03); color: var(--text-main); }
+        .tab-btn.active {
+            background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(147, 51, 234, 0.2);
+        }
+
+        .upload-box {
+            border: 2px dashed rgba(147, 51, 234, 0.3);
+            padding: 25px 10px;
+            border-radius: 14px;
+            background: #fdfafe;
+            text-align: center;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: all 0.2s;
+        }
+        .upload-box:hover {
+            border-color: var(--primary-purple);
+            background: #f5f0ff;
+        }
+
+        .search-container {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 25px;
+        }
+        .search-input {
+            width: 100%; padding: 8px 12px;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px; color: var(--text-main); box-sizing: border-box;
+            font-family: 'Sarabun', sans-serif; font-size: 13px; margin-top: 6px;
+        }
+        .search-input:focus { outline: none; border-color: var(--primary-purple); box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15); }
+        .search-results {
+            margin-top: 10px; max-height: 110px; overflow-y: auto;
+            background: #ffffff; border-radius: 6px; border: 1px solid #e2e8f0;
+        }
+        .search-item {
+            padding: 6px 10px; border-bottom: 1px solid #f1f5f9;
+            display: flex; justify-content: space-between; font-size: 12px; color: var(--text-main);
+        }
+
+        .action-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
+            color: white; border: none; padding: 14px;
+            cursor: pointer; border-radius: 12px; font-weight: bold; font-size: 15px;
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.2);
+            transition: all 0.15s;
+        }
+        .action-btn:hover { filter: brightness(1.05); transform: translateY(-1px); }
+        .action-btn:disabled { background: #cbd5e1; color: #94a3b8; cursor: not-allowed; box-shadow: none; transform: none; }
+
+        .workspace-area {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(148, 163, 184, 0.15);
+            overflow: hidden; /* ป้องกันกล่องใหญ่ขยายทะลุจอ */
+        }
+
+        /* 🛠️ แก้ไขจุดนี้: บังคับให้พื้นที่ครอบตารางเปิด Scrollbar แนวนอนเสมอถ้าข้อมูลเกิน */
+        .table-wrap {
+            width: 100%;
+            overflow-x: auto; 
+            overflow-y: auto;
+            max-height: 540px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px; 
+            margin-top: 15px;
+            background: #ffffff;
+        }
+
+        /* 🛠️ แก้ไขจุดนี้: ตั้งค่าความกว้างตารางให้ยืดหยุ่น ไม่โดนบีบอัด */
+        table { 
+            width: max-content; 
+            min-width: 100%;
+            border-collapse: collapse; 
+            font-size: 12px; 
+        }
+        
+        th {
+            background: #f1f5f9; color: #334155; position: sticky; top: 0; z-index: 5;
+            padding: 12px 14px; border-bottom: 2px solid var(--primary-purple);
+            white-space: nowrap; text-align: left; font-family: 'Kanit', sans-serif;
+        }
+        td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; white-space: nowrap; color: #334155; }
+        tr:hover { background: #faf5ff; }
+        
+        td input {
+            width: 120px; border: 1px solid transparent; background: transparent;
+            padding: 4px; color: #334155; font-family: 'Sarabun', sans-serif; font-size: 12px;
+        }
+        td input:focus {
+            background: #ffffff; border-color: var(--primary-purple);
+            outline: none; border-radius: 4px; box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.1);
+        }
+
+        .instruction-box {
+            font-size: 0.85rem; color: var(--text-muted); margin-top: 25px; padding: 18px;
+            background: #f8fafc; border-radius: 12px;
+            border-left: 4px solid var(--primary-purple); border: 1px solid #e2e8f0;
+        }
+        .highlight { color: #f43f5e; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="main-layout">
+    <div class="sidebar">
+        <h2>DARAN MAPPER ASST</h2>
+        <p class="subtitle">ศูนย์รวมแปลงข้อมูล รร.๔ & ตม.๓๐</p>
+        
+        <div class="tab-container">
+            <button id="tab-rr4" class="tab-btn active" onclick="switchMode('rr4')">โหมด รร.๔</button>
+            <button id="tab-tm30" class="tab-btn" onclick="switchMode('tm30')">โหมด ตม.๓๐</button>
+        </div>
+
+        <div class="upload-box" onclick="document.getElementById('fileSelector').click()">
+            <span style="font-size: 35px;">📂</span>
+            <div id="statusLabel" style="font-size: 13px; margin-top: 8px; color: var(--text-muted);">เลือกไฟล์</div>
+            <input type="file" id="fileSelector" accept=".csv" style="display:none;" onchange="loadCsvFile(this)">
+        </div>
+
+        <div class="search-container">
+            <label style="font-family:'Kanit'; font-size:13px; color:#6d28d9;">🔍 ค้นหารหัสสัญชาติ</label>
+            <input type="text" class="search-input" placeholder="พิมพ์ชื่อประเทศ เช่น เมียนมา, อังกฤษ..." oninput="findGlobalNation(this.value)">
+            <div id="searchResponse" class="search-results">
+                <div style="padding:8px; color:var(--text-muted); font-size:11px; text-align:center;">พิมพ์ชื่อสัญชาติเพื่อค้นหา</div>
+            </div>
+        </div>
+
+        <button id="downloadBtn" class="action-btn" onclick="triggerDownload()" disabled>
+            💾 ดาวน์โหลดไฟล์ผลลัพธ์
+        </button>
+    </div>
+
+    <div class="workspace-area">
+        <h3 id="workspaceTitle">Preview Page กรุณาตรวจสอบความถูกต้องก่อนค่ะ</h3>
+        <p class="subtitle" style="margin-bottom: 5px;">💡 สามารถคลิกพิมพ์แก้ไขข้อมูลในตารางช่องใดก็ได้โดยตรง ก่อนกดดาวน์โหลดไฟล์พร้อมส่ง</p>
+        
+        <div class="table-wrap">
+            <table id="previewTable">
+                <thead id="tableHeader">
+                </thead>
+                <tbody id="tableBody">
+                    <tr>
+                        <td id="emptyStateCell" style="text-align: center; color: var(--text-muted); padding: 60px;">ยังไม่มีข้อมูล — กรุณาเลือกอัปโหลดไฟล์เพื่อเริ่มระบบ</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="guideArea" class="instruction-box">
+        </div>
+    </div>
+</div>
+
+<script>
+    const masterNationData = [
+        {th:"ประเทศไทย", en:"Thai", rr4:"99", tm30:"THA"}, {th:"พม่า", en:"Myanmar", rr4:"48", tm30:"MMR"},
+  {th:"เมียนมา(แรงงาน)", en:"Myanmar", rr4:"265", tm30:"MMR"}, {th:"อังกฤษ", en:"British", rr4:"126", tm30:"GBR"},
+  {th:"อังกฤษ", en:"English", rr4:"126", tm30:"GBR"}, {th:"อเมริกัน", en:"American", rr4:"29", tm30:"USA"},
+  {th:"อิสราเอล", en:"ISRAEL", rr4:"60", tm30:"ISR"}, {th:"ซาอุดิ", en:"Saudi Arabian or Saudi", rr4:"59", tm30:"SAU"},
+  {th:"จีน", en:"Chinese", rr4:"44", tm30:"CHN"}, {th:"ญี่ปุ่น", en:"Japanese", rr4:"47", tm30:"JPN"},
+  {th:"เกาหลีใต้", en:"THE REPUBLIC OF KOREA", rr4:"53", tm30:"KOR"}, {th:"เยอรมัน", en:"GERMAN", rr4:"4", tm30:"DEU"},
+  {th:"ฝรั่งเศส", en:"FRANCE", rr4:"5", tm30:"FRA"}, {th:"รัสเซีย", en:"Russian", rr4:"16", tm30:"RUS"},
+  {th:"กัมพูชา", en:"Cambodian", rr4:"57", tm30:"KHM"}, {th:"ลาว", en:"LAO", rr4:"56", tm30:"LAO"},
+  {th:"เวียดนาม", en:"VIETNAMESE", rr4:"46", tm30:"VNM"}, {th:"สิงคโปร์", en:"Singaporean", rr4:"54", tm30:"SGP"},
+  {th:"มาเลเซีย", en:"Malaysian", rr4:"50", tm30:"MYS"}, {th:"ออสเตรเลีย", en:"Australian", rr4:"79", tm30:"AUS"},
+  {th:"แคนาดา", en:"CANADIAN", rr4:"30", tm30:"CAN"}, {th:"เช็ก", en:"CZECH", rr4:"18", tm30:"CZE"},
+  {th:"ยูเครน", en:"Ukrainian", rr4:"216", tm30:"UKR"}, {th:"สวิส", en:"Swiss", rr4:"8", tm30:"CHE"},
+  {th:"เนเธอร์แลนด์", en:"Dutch", rr4:"3", tm30:"NLD"}, {th:"สวีเดน", en:"Swedish", rr4:"7", tm30:"SWE"},
+  {th:"อินเดีย", en:"Indian", rr4:"45", tm30:"IND"}, {th:"อินโดนีเซีย", en:"Indonesian", rr4:"51", tm30:"IDN"},
+  {th:"อิสราเอล", en:"Israeli", rr4:"60", tm30:"ISR"}, {th:"กรีก", en:"Greece", rr4:"20", tm30:"GRC"},
+  {th:"กัวเตมาลา", en:"GUATEMALA", rr4:"181", tm30:"GTM"}, {th:"กาตาร์", en:"Qatar", rr4:"108", tm30:"QAT"},
+  {th:"ไต้หวัน", en:"CHINA (TAIWAN)", rr4:"220", tm30:"TWN"}, {th:"ฟิลิปปินส์", en:"Philippine", rr4:"49", tm30:"PHL"},
+  {th:"นิวซีแลนด์", en:"New zealander", rr4:"80", tm30:"NZL"}, {th:"ฮ่องกง", en:"Hongkong", rr4:"219", tm30:"HKG"},
+  {th:"กะเหรี่ยง", en:"Karen", rr4:"71", tm30:""}, {th:"กะเหรี่ยง(ชุมชนบนพื้นที่สูง)", en:"", rr4:"259", tm30:""},
+  {th:"กะเหรี่ยง(ผู้หลบหนีเข้าเมือง)", en:"", rr4:"254", tm30:""}, {th:"กัมพูชา (กลุ่มเชื้อสายไทย)", en:"-", rr4:"274", tm30:"KHM"},
+  {th:"กัมพูชา(ผู้หลบหนีเข้าเมือง)", en:"", rr4:"257", tm30:"KHM"}, {th:"กัมพูชา(แรงงาน)", en:"Combodian", rr4:"264", tm30:"KHM"},
+  {th:"กานา", en:"GHANA", rr4:"144", tm30:"GHA"}, {th:"กาบอง", en:"GABON", rr4:"142", tm30:"GAB"},
+  {th:"กาบูเวร์ดี", en:"Cabo Verde", rr4:"270", tm30:"CPV"}, {th:"กายอานา", en:"GUYANA", rr4:"192", tm30:"GUY"},
+  {th:"กินี", en:"GUINEA", rr4:"78", tm30:"GIN"}, {th:"กินีบีสเซา", en:"GUINEA BISSAU", rr4:"145", tm30:"GNB"},
+  {th:"เกรเนดา", en:"GRENADA", rr4:"180", tm30:"GRD"}, {th:"เกาหลีเหนือ", en:"THE DEMOCRATIC OF KOREA", rr4:"104", tm30:"PRK"},
+  {th:"แกมเบีย", en:"GAMBIA", rr4:"143", tm30:"GMB"}, {th:"ขมุ", en:"KHAMU", rr4:"200", tm30:""},
+  {th:"เขมรอพยพ", en:"", rr4:"91", tm30:""}, {th:"คองโก", en:"Congco", rr4:"138", tm30:"COG"},
+  {th:"คอซอวอ", en:"KOSOVO", rr4:"271", tm30:"XKX"}, {th:"คอโมโรส", en:"COMOROS", rr4:"137", tm30:"COM"},
+  {th:"คอสตาริกา", en:"COSTA RICA", rr4:"176", tm30:"CRI"}, {th:"คะฉิ่น", en:"Kachin", rr4:"196", tm30:""},
+  {th:"คาซัค", en:"KAZAKH", rr4:"223", tm30:"KAZ"}, {th:"คิริบาส", en:"KIRIBATI", rr4:"112", tm30:"KIR"},
+  {th:"คิวบา", en:"CUBA", rr4:"32", tm30:"CUB"}, {th:"คีร์กีซ", en:"KYRGYZ", rr4:"227", tm30:"KGZ"},
+  {th:"คูเวต", en:"Kuwaiti", rr4:"68", tm30:"KWT"}, {th:"เคนยา", en:"Kenya", rr4:"73", tm30:"KEN"},
+  {th:"เคปเวิร์ด", en:"CAPE VERDE", rr4:"134", tm30:"CPV"}, {th:"แคแมนรูน", en:"CAMEROON", rr4:"133", tm30:"CMR"},
+  {th:"โครเอเชีย", en:"CROATIA", rr4:"221", tm30:"HRV"}, {th:"โคลัมเบีย", en:"COLOMBIA", rr4:"37", tm30:"COL"},
+  {th:"จอร์เจีย", en:"GEORGIAN", rr4:"226", tm30:"GEO"}, {th:"จอร์แดน", en:"JORDAN", rr4:"103", tm30:"JOR"},
+  {th:"จาเมกา", en:"JAMAICA", rr4:"184", tm30:"JAM"}, {th:"จิบูตี", en:"DJIBOUTI", rr4:"140", tm30:"DJI"},
+  {th:"จีน (จีนฮ่ออพยพ)", en:"", rr4:"214", tm30:"CHN"}, {th:"จีน (จีนฮ่ออิสระ)", en:"", rr4:"212", tm30:"CHN"},
+  {th:"จีน (อดีต ทจช.)", en:"", rr4:"87", tm30:"CHN"}, {th:"จีน(อดีต จคม.)", en:"", rr4:"252", tm30:"CHN"},
+  {th:"จีนฮ่อ", en:"Haw", rr4:"86", tm30:""}, {th:"ชาด", en:"CHAD", rr4:"136", tm30:"TCD"},
+  {th:"ชิลี", en:"CHILE", rr4:"35", tm30:"CHL"}, {th:"ซานมารีโน", en:"SAN MARINO", rr4:"125", tm30:"SMR"},
+  {th:"ซามัว", en:"SAMOAN", rr4:"118", tm30:"WSM"}, {th:"ซาอีร์", en:"ZAIRE", rr4:"169", tm30:"COD"},
+  {th:"ซาอุดีอาระเบีย", en:"SAUDI ARABIAN", rr4:"59", tm30:"SAU"}, {th:"ซิมบับเว", en:"ZIMBABWE", rr4:"171", tm30:"ZWE"},
+  {th:"ซีเรีย", en:"SYRIA", rr4:"66", tm30:"SYR"}, {th:"ซูดาน", en:"SUDAN", rr4:"163", tm30:"SDN"},
+  {th:"ซูรินาเม", en:"SURINAME", rr4:"194", tm30:"SUR"}, {th:"เซเชลส์", en:"SEYCHELLES", rr4:"160", tm30:"SYC"},
+  {th:"เซนต์คิตส์และเนวิส", en:"SAINT KITTS AND NEVIS", rr4:"186", tm30:"KNA"}, {th:"เซนต์ลูเซีย", en:"SAINT LUCIA", rr4:"187", tm30:"LCA"},
+  {th:"เซนต์วินเซนต์และเกรนาดีนส์", en:"SAINT VINCENT AND THE", rr4:"188", tm30:"VCT"}, {th:"เซเนกัล", en:"SENEGAL", rr4:"159", tm30:"SEN"},
+  {th:"เซอร์เบีย แอนด์ มอนเตเนโกร", en:"SERBIA AND MONTENEGRO", rr4:"263", tm30:"SCG"}, {th:"เซอร์เบียน", en:"SERBIAN", rr4:"267", tm30:"SRB"},
+  {th:"เซาโตเมและปรินซิเป", en:"SAO TOME AND PRINCIPE", rr4:"158", tm30:"STP"}, {th:"เซาท์ซูดาน", en:"South Sudan", rr4:"272", tm30:"SSD"},
+  {th:"เซียร์ราลีโอน", en:"SIERRA LEONE", rr4:"161", tm30:"SLE"}, {th:"แซมเบีย", en:"ZAMBIA", rr4:"170", tm30:"ZMB"},
+  {th:"โซมาลี", en:"SOMALI", rr4:"162", tm30:"SOM"}, {th:"ไซปรัส", en:"CYPRUS", rr4:"28", tm30:"CYP"},
+  {th:"ดัตช์", en:"Dutch", rr4:"3", tm30:"NLD"}, {th:"เดนมาร์ก", en:"DANNISH", rr4:"6", tm30:"DNK"},
+  {th:"โดมินิกัน", en:"DOMINICAN", rr4:"178", tm30:"DOM"}, {th:"โดมินิกา", en:"DOMINICA", rr4:"177", tm30:"DMA"},
+  {th:"ตรินิแดดและโตเบโก", en:"TRINIDAD AND TOBAGO", rr4:"189", tm30:"TTO"}, {th:"ตองก้า", en:"TONGA", rr4:"115", tm30:"TON"},
+  {th:"ตองสู", en:"TONGSU", rr4:"201", tm30:""}, {th:"ติมอร์-防斯เต", en:"TIMOR - LESTE", rr4:"261", tm30:"TLS"},
+  {th:"ตุรกี", en:"TURKEY", rr4:"63", tm30:"TUR"}, {th:"ตูนิเซีย", en:"TUNISIAN", rr4:"167", tm30:"TUN"},
+  {th:"ตูวาลู", en:"TUVALU", rr4:"116", tm30:"TUV"}, {th:"เติร์กเมน", en:"TURKMEN", rr4:"235", tm30:"TKM"},
+  {th:"โตโก", en:"TOGO", rr4:"166", tm30:"TGO"}, {th:"ถิ่น", en:"Htin", rr4:"206", tm30:""},
+  {th:"ถูกถอนสัญชาติ", en:"", rr4:"65", tm30:""}, {th:"ทาจิก", en:"TAJIK", rr4:"228", tm30:"TJK"},
+  {th:"แทนซาเนีย", en:"TANZANIA", rr4:"165", tm30:"TZA"}, {th:"ไทยลื้อ", en:"THAILUE", rr4:"199", tm30:""},
+  {th:"ไทยลื้อ (กลุ่มเชื้อสายไทย)", en:"-", rr4:"276", tm30:""}, {th:"ไทยใหญ่", en:"Shan", rr4:"198", tm30:""},
+  {th:"ไทยใหญ่(ผู้พลัดถิ่นสัญชาติพม่า", en:"", rr4:"249", tm30:""}, {th:"ไทยใหญ่(ผู้หลบหนีเข้าเมือง)", en:"", rr4:"256", tm30:""},
+  {th:"นอร์เวย์", en:"NORWAY", rr4:"10", tm30:"NOR"}, {th:"นามิเบีย", en:"NAMIBIAN", rr4:"244", tm30:"NAM"},
+  {th:"นาอูรู", en:"NAURU", rr4:"113", tm30:"NRU"}, {th:"นิการากัว", en:"NICARAGUA", rr4:"185", tm30:"NIC"},
+  {th:"เนปาล", en:"NEPAL", rr4:"55", tm30:"NPL"}, {th:"เนปาล (เนปาลอพยพ)", en:"-", rr4:"282", tm30:"NPL"},
+  {th:"ไนจีเรีย", en:"NIGERIA", rr4:"76", tm30:"NGA"}, {th:"ไนเจอร์", en:"NIGER", rr4:"156", tm30:"NER"},
+  {th:"บราซิล", en:"BRAZIL", rr4:"34", tm30:"BRA"}, {th:"บรูไน", en:"BRUNEI", rr4:"69", tm30:"BRN"},
+  {th:"บอตสวานา", en:"BOTSWANA", rr4:"130", tm30:"BWA"}, {th:"บอสเนียและเฮอร์เซโกวีนา", en:"REPBLIC OF BOSNIA HERAEGO", rr4:"234", tm30:"BIH"},
+  {th:"บังกลาเทศ", en:"BANGLADESH", rr4:"64", tm30:"BGD"}, {th:"บัลแกเรีย", en:"BULGARIA", rr4:"26", tm30:"BGR"},
+  {th:"บาร์เบโดส", en:"BARBADOS", rr4:"174", tm30:"BRB"}, {th:"บาห์เรน", en:"BAHRAINI", rr4:"101", tm30:"BHR"},
+  {th:"บาฮามาส", en:"BAHAMAS", rr4:"173", tm30:"BHS"}, {th:"บุคคลที่ไม่มีสถานะทางทะเบียน", en:"-", rr4:"989", tm30:""},
+  {th:"บุรุนดี", en:"BURUNDI", rr4:"132", tm30:"BDI"}, {th:"บูร์กินาฟาโซ", en:"BURKINA FASO", rr4:"131", tm30:"BFA"},
+  {th:"เบนิน", en:"BENIN", rr4:"129", tm30:"BEN"}, {th:"เบลเยียม", en:"BELGIAN", rr4:"14", tm30:"BEL"},
+  {th:"เบลารุส", en:"BELARUSIAN", rr4:"233", tm30:"BLR"}, {th:"เบลิซ", en:"BELIZE", rr4:"175", tm30:"BLZ"},
+  {th:"โบลิเวีย", en:"BOLIVIAN", rr4:"245", tm30:"BOL"}, {th:"โบลีเวีย", en:"BOLIVIA", rr4:"190", tm30:"BOL"},
+  {th:"ปะหร่อง", en:"PALONG", rr4:"205", tm30:""}, {th:"ปะโอ", en:"PAO", rr4:"207", tm30:""},
+  {th:"ปากีสถาน", en:"PAKISTAN", rr4:"52", tm30:"PAK"}, {th:"ปานามา", en:"PANAMA", rr4:"40", tm30:"PAN"},
+  {th:"ปาปัวนิวกินี", en:"PAPUA NEW GUINEA", rr4:"81", tm30:"PNG"}, {th:"ปารากวัย", en:"PARAGUAY", rr4:"193", tm30:"PRY"},
+  {th:"ปาเลสไตน์", en:"PALESTINE", rr4:"260", tm30:"PSE"}, {th:"ปาเลา", en:"PALAU", rr4:"232", tm30:"PLW"},
+  {th:"เปรู", en:"PERU", rr4:"39", tm30:"PER"}, {th:"โปรตุเกส", en:"PORTUGUESE", rr4:"2", tm30:"PRT"},
+  {th:"โปแลนด์", en:"POLAND", rr4:"17", tm30:"POL"}, {th:"ผู้พลัดถิ่นสัญชาติพม่า", en:"", rr4:"88", tm30:"MMR"},
+  {th:"ผู้อพยพเชื้อสายจากกัมพูชา", en:"", rr4:"89", tm30:"KHM"}, {th:"ฟิจิ", en:"FIJI", rr4:"111", tm30:"FJI"},
+  {th:"ฟินแลนด์", en:"FINLAND", rr4:"13", tm30:"FIN"}, {th:"ภูฏาน", en:"BAHRAIN", rr4:"102", tm30:"BTN"},
+  {th:"ม้ง", en:"Hmong", rr4:"82", tm30:""}, {th:"มลาบรี", en:"Mlabri", rr4:"209", tm30:""},
+  {th:"มองโกเลีย", en:"MONGOLIA", rr4:"106", tm30:"MNG"}, {th:"มอญ", en:"Mon", rr4:"208", tm30:""},
+  {th:"มอญ(ชุมชนบนพื้นที่สูง)", en:"", rr4:"258", tm30:""}, {th:"มอญ(ผู้พลัดถิ่นสัญชาติพม่า)", en:"", rr4:"248", tm30:""},
+  {th:"มอญ(ผู้หลบหนีเข้าเมือง)", en:"", rr4:"255", tm30:""}, {th:"มอนเตเนกริน", en:"MONTENEGRIN", rr4:"268", tm30:"MNE"},
+  {th:"มอริเชียส", en:"MAURITIUS", rr4:"153", tm30:"MUS"}, {th:"มอริเตเนีย", en:"MAURITANTA", rr4:"152", tm30:"MRT"},
+  {th:"มอลโดวา", en:"MOLDOVAN", rr4:"240", tm30:"MDA"}, {th:"มอลตา", en:"MALTESE", rr4:"24", tm30:"MLT"},
+  {th:"มัลดีฟ", en:"MALDIVIAN", rr4:"105", tm30:"MDV"}, {th:"มาซิโดเนีย", en:"MACEDONIA", rr4:"239", tm30:"MKD"},
+  {th:"มาลากาซี", en:"MALAGASY", rr4:"149", tm30:"MDG"}, {th:"มาลาวี", en:"MALAWIAN", rr4:"150", tm30:"MWI"},
+  {th:"มาลี", en:"MALI", rr4:"151", tm30:"MLI"}, {th:"มาเลเชีย(อดีต จคม.)", en:"", rr4:"251", tm30:"MYS"},
+  {th:"เม็กซิกัน", en:"MEXICAN", rr4:"31", tm30:"MEX"}, {th:"เมี่ยน", en:"Mien", rr4:"83", tm30:""},
+  {th:"เมียนมา", en:"Burmese", rr4:"48", tm30:"MMR"}, {th:"เมียนมา (กลุ่มเชื้อสายไทย)", en:"-", rr4:"273", tm30:"MMR"},
+  {th:"โมซัมบิก", en:"MOZAMBIQUE", rr4:"155", tm30:"MOZ"}, {th:"โมนาโก", en:"MONACO", rr4:"124", tm30:"MCO"},
+  {th:"โมร็อกโก", en:"MOROCCAN", rr4:"154", tm30:"MAR"}, {th:"ไมโครนีเซีย", en:"MICRONESIA", rr4:"231", tm30:"FSM"},
+  {th:"ไม่ได้สัญชาติไทย", en:"Non-Thai", rr4:"98", tm30:""}, {th:"ยูกันดา", en:"UGANDA", rr4:"168", tm30:"UGA"},
+  {th:"ยูโกสลาฟ", en:"YUGOSLAV", rr4:"21", tm30:"YUG"}, {th:"เยเมน", en:"YEMEN", rr4:"109", tm30:"YEM"},
+  {th:"รวันดา", en:"RWANDA", rr4:"157", tm30:"RWA"}, {th:"โรมาเนีย", en:"ROMANIAN", rr4:"27", tm30:"ROU"},
+  {th:"ไร้สัญชาติ", en:"Stateless", rr4:"96", tm30:""}, {th:"ละว้า", en:"LAWA", rr4:"203", tm30:""},
+  {th:"ลักเซมเบิร์ก", en:"LUXEMBOURGE", rr4:"22", tm30:"LUX"}, {th:"ลัตเวีย", en:"LATVIAN", rr4:"237", tm30:"LVA"},
+  {th:"ลั๊ว", en:"Lua", rr4:"38", tm30:""}, {th:"ลาว (กลุ่มเชื้อสายไทย)", en:"-", rr4:"275", tm30:"LAO"},
+  {th:"ลาว (ลาวอพยพ)", en:"", rr4:"90", tm30:"LAO"}, {th:"ลาว(แรงงาน)", en:"LAO", rr4:"266", tm30:"LAO"},
+  {th:"ลาหู่", en:"Lahu", rr4:"72", tm30:""}, {th:"ลิกเตนสไตน์", en:"LIECHTENSTEIN", rr4:"123", tm30:"LIE"},
+  {th:"ลิทัวเนีย", en:"LITHUANIAN", rr4:"238", tm30:"LTU"}, {th:"ลิเบีย", en:"Libya", rr4:"148", tm30:"LBY"},
+  {th:"ลีซู", en:"Lisu", rr4:"25", tm30:""}, {th:"เลโซโท", en:"LESOTHO", rr4:"146", tm30:"LSO"},
+  {th:"เลบานอน", en:"LEBANON", rr4:"61", tm30:"LBN"}, {th:"ไลบีเรีย", en:"LIBERIA", rr4:"147", tm30:"LBR"},
+  {th:"ว้า", en:"Wa", rr4:"197", tm30:""}, {th:"วาติกัน", en:"VATIGAN", rr4:"23", tm30:"VAT"},
+  {th:"วานูอาตู", en:"VANUATU", rr4:"117", tm30:"VUT"}, {th:"เวเนซุเอลา", en:"VENEZUELA", rr4:"42", tm30:"VEN"},
+  {th:"เวียดนาม(ญวนอพยพ)", en:"", rr4:"250", tm30:"VNM"}, {th:"ศรีลังกา", en:"SRI LANKA", rr4:"58", tm30:"LKA"},
+  {th:"สเปน", en:"SPAIN", rr4:"15", tm30:"ESP"}, {th:"สละสัญชาติไทย", en:"THE RENUNCIATION OF THAI NATIO", rr4:"262", tm30:""},
+  {th:"สโลวัก", en:"SLOVAK", rr4:"241", tm30:"SVK"}, {th:"สโลวีน", en:"SLOVENE", rr4:"242", tm30:"SVN"},
+  {th:"สวาซี", en:"SWAZI", rr4:"164", tm30:"SWZ"}, {th:"สหรัฐอาหรับเอมิเรตส์", en:"UNITED ARAB EMIRATE", rr4:"77", tm30:"ARE"},
+  {th:"สิงคโปร์(อดีต จคม.)", en:"", rr4:"253", tm30:"SGP"}, {th:"หมู่เกาะคุก", en:"COOK ISLANDS", rr4:"246", tm30:"COK"},
+  {th:"หมู่เกาะโซโลมอน", en:"SOLOMON ISLANDS", rr4:"114", tm30:"SLB"}, {th:"หมู่เกาะมาร์แชลล์", en:"Marshallese", rr4:"230", tm30:"MHL"},
+  {th:"ออสเตรีย", en:"AUSTRIA", rr4:"11", tm30:"AUT"}, {th:"อันดอร์รา", en:"ANDORRA", rr4:"120", tm30:"AND"},
+  {th:"อัฟกัน", en:"AFGHAN", rr4:"100", tm30:"AFG"}, {th:"อาข่า", en:"Akha", rr4:"36", tm30:""},
+  {th:"อาเซอร์ไบจาน", en:"AZERBAIJANI", rr4:"225", tm30:"AZE"}, {th:"อาร์เจนตินา", en:"Argentinian", rr4:"33", tm30:"ARG"},
+  {th:"อาร์เมเนีย", en:"ARMENIAN", rr4:"224", tm30:"ARM"}, {th:"อาหรับ", en:"ARAB", rr4:"195", tm30:""},
+  {th:"อิเควทอเรียลกินี", en:"EQUATORIAL GUINEA", rr4:"141", tm30:"GNQ"}, {th:"อิตาลี", en:"Italian", rr4:"9", tm30:"ITA"},
+  {th:"อิรัก", en:"Ieaqi", rr4:"67", tm30:"IRQ"}, {th:"อิหร่าน", en:"Iranian", rr4:"62", tm30:"IRN"},
+  {th:"อียิปต์", en:"Egyptian", rr4:"74", tm30:"EGY"}, {th:"อื่นๆ", en:"Other", rr4:"97", tm30:""},
+  {th:"อุซเบก", en:"UZBEK", rr4:"229", tm30:"UZB"}, {th:"อุรุกวัย", en:"URUGUAY", rr4:"41", tm30:"URY"},
+  {th:"เอกวาดอร์", en:"ECUADOR", rr4:"191", tm30:"ECU"}, {th:"เอธิโอเปีย", en:"ETHIOPIA", rr4:"75", tm30:"ETH"},
+  {th:"เอริเทรีย", en:"ERITREAN", rr4:"243", tm30:"ERI"}, {th:"เอลซัลวาดอร์", en:"EL,SALVADOR", rr4:"179", tm30:"SLV"},
+  {th:"เอสโตเนีย", en:"ESTONIAN", rr4:"236", tm30:"EST"}, {th:"แองโกลา", en:"ANGOLAN", rr4:"128", tm30:"AGO"},
+  {th:"แอนติกาและบาร์บูดา", en:"ANTIGUA AND BARBUDA", rr4:"172", tm30:"ATG"}, {th:"แอฟริกา", en:"CENTRAL AFRICAN REPUBLIC", rr4:"135", tm30:"CAF"},
+  {th:"แอฟริกาใต้", en:"SOUTH AFRICAN", rr4:"70", tm30:"ZAF"}, {th:"แอลจีเรีย", en:"ALGERIA", rr4:"127", tm30:"DZA"},
+  {th:"แอลเบเนีย", en:"ALBANIA", rr4:"119", tm30:"ALB"}, {th:"โอมาน", en:"OMAN", rr4:"107", tm30:"OMN"},
+  {th:"ไอซ์แลนด์", en:"ICELAND", rr4:"122", tm30:"ISL"}, {th:"ไอริช", en:"IRISH", rr4:"12", tm30:"IRL"},
+  {th:"ไอโวเรี่ยน", en:"IVOIRIENNE", rr4:"139", tm30:"CIV"}, {th:"ฮอนดูรัส", en:"HONDURAS", rr4:"183", tm30:"HND"},
+  {th:"ฮังการี", en:"Hungarian", rr4:"19", tm30:"HUN"}, {th:"เฮติ", en:"Haiti", rr4:"182", tm30:"HTI"}
+    ];
+
+    let currentMode = 'rr4';
+    let rawCsvData = [];
+    let tableWorkingRows = [];
+
+    const headersConfig = {
+        rr4: [
+            "เลขลำดับ (1)", "วันที่เข้าพัก (2)", "เวลาที่เข้าพัก (3)", "ห้องพักเลขที่ (4)",
+            "คำนำหน้า (TH) (5)", "ชื่อ (TH) (6)", "ชื่อกลาง (TH) (7)", "นามสกุล (TH) (8)",
+            "คำนำหน้า (EN) (9)", "ชื่อ (EN) (10)", "ชื่อกลาง (EN) (11)", "นามสกุล (EN) (12)",
+            "สัญชาติ (13)", "เลขบัตร ปชช. (14)", "พาสปอร์ต (15)", "พาสปอร์ตออกให้โดย (16)",
+            "ที่อยู่ปัจจุบัน (17)", "ประเทศที่อยู่ปัจจุบัน (18)", "อาชีพ (19)", "มาจาก (20)",
+            "มาจากประเทศ (21)", "จะไปที่ (22)", "จะไปประเทศ (23)", "วันที่จะออก (24)",
+            "เวลาที่จะออก (25)", "สถานะข้อมูล (26)", "หมายเหตุ (27)"
+        ],
+        tm30: [
+            "ชื่อ\nFirst Name *", 
+            "ชื่อกลาง\nMiddle Name", 
+            "นามสกุล\nLast Name", 
+            "เพศ\nGender *",
+            "เลขหนังสือเดินทาง\nPassport No. *", 
+            "สัญชาติ\nNationality *", 
+            "วัน เดือน ปี เกิด\nBirth Date\nDD/MM/YYYY(ค.ศ. / A.D.) \nเช่น 17/06/1985 หรือ 10/00/1985 หรือ 00/00/1985", 
+            "วันที่แจ้งออกจากที่พัก\nCheck-out Date\nDD/MM/YYYY(ค.ศ. / A.D.) \nเช่น 14/06/2023", 
+            "เบอร์โทรศัพท์\nPhone No."
+        ]
+    };
+
+    function switchMode(mode) {
+        currentMode = mode;
+        document.getElementById('tab-rr4').className = mode === 'rr4' ? 'tab-btn active' : 'tab-btn';
+        document.getElementById('tab-tm30').className = mode === 'tm30' ? 'tab-btn active' : 'tab-btn';
+        document.getElementById('workspaceTitle').innerText = mode === 'rr4' ? 'Preview ตารางข้อมูล รร.๔' : 'Preview ตารางข้อมูล ตม.30';
+        updateGuideAndLabels();
+        if (rawCsvData.length > 0) { processAndTransform(); } else { renderHeaderOnly(); }
+    }
+
+    function updateGuideAndLabels() {
+        const guide = document.getElementById('guideArea');
+        if (currentMode === 'rr4') {
+            guide.innerHTML = `<b>💡 ขั้นตอนการใช้งานโหมด รร.๔:</b><br>ระบบจะแปลงรหัสสัญชาติเป็นตัวเลขให้โดยอัตโนมัติ เมื่อแก้ไขเรียบร้อย กดดาวน์โหลด จะได้รับไฟล์แบบ Excel (.xlsx) นำไปส่งใช้งานได้ทันที`;
+        } else {
+            guide.innerHTML = `<b>💡 ขั้นตอนการใช้งานโหมด ตม.30:</b><br>ระบบจะคัดกรองเฉพาะชาวต่างชาติ และแปลงสัญชาติเป็นรหัสอักษร 3 หลักตามแบบ ตม. <span class="highlight">เมื่อกดดาวน์โหลด ระบบจะส่งออกไฟล์เป็นรูปแบบ Excel (.xls) แท้ๆ ให้ทันที</span> สามารถนำไปกดอัปโหลดเข้าหน้าเว็บ ตม. ได้โดยตรงเลยครับ`;
+        }
+    }
+
+    function findGlobalNation(query) {
+        const resArea = document.getElementById('searchResponse');
+        if (!query.trim()) {
+            resArea.innerHTML = `<div style="padding:8px; color:var(--text-muted); font-size:11px; text-align:center;">พิมพ์ชื่อสัญชาติเพื่อค้นหา</div>`;
+            return;
+        }
+        const token = query.toLowerCase();
+        const matches = masterNationData.filter(i => i.th.toLowerCase().includes(token) || i.en.toLowerCase().includes(token));
+        if (matches.length === 0) {
+            resArea.innerHTML = `<div style="padding:8px; color:#f43f5e; font-size:11px; text-align:center;">❌ ไม่พบรหัสในฐานข้อมูลหลัก</div>`;
+            return;
+        }
+        resArea.innerHTML = "";
+        matches.forEach(m => {
+            const row = document.createElement('div');
+            row.className = "search-item";
+            row.innerHTML = `<span>🇹🇭 ${m.th} (${m.en})</span> <span>รร.4: <b>${m.rr4 || '97'}</b> | ตม.30: <b>${m.tm30}</b></span>`;
+            resArea.appendChild(row);
+        });
+    }
+
+    function renderHeaderOnly() {
+        const thead = document.getElementById('tableHeader');
+        thead.innerHTML = "<tr>" + headersConfig[currentMode].map(h => `<th>${h.replace(/\n/g, '<br>')}</th>`).join('') + "</tr>";
+    }
+
+    function loadCsvFile(input) {
+        if (!input.files.length) return;
+        document.getElementById('statusLabel').innerText = "เลือกไฟล์แล้ว: " + input.files[0].name;
+        Papa.parse(input.files[0], {
+            header: true, skipEmptyLines: true,
+            complete: function(res) {
+                rawCsvData = res.data;
+                processAndTransform();
+                document.getElementById('downloadBtn').disabled = false;
+            }
+        });
+    }
+
+    function cleanDateFormat(str) {
+        if (!str || str === "-") return "";
+        const mList = { jan:"01", feb:"02", mar:"03", apr:"04", may:"05", jun:"06", jul:"07", aug:"08", sep:"09", oct:"10", nov:"11", dec:"12" };
+        const items = str.trim().split(" ");
+        if (items.length >= 3) {
+            return `${items[0].padStart(2, '0')}/${mList[items[1].toLowerCase().substring(0,3)] || '01'}/${items[2]}`;
+        }
+        return str;
+    }
+
+    function processAndTransform() {
+        renderHeaderOnly();
+        tableWorkingRows = [];
+        rawCsvData.forEach((row, i) => {
+            const fName = (row["First Name"] || "").trim();
+            const lName = (row["Last Name"] || "").trim();
+            const sex = (row["Sex"] || "").trim().toLowerCase();
+            const rawNation = (row["Nationality"] || "").trim();
+            const mappingMatch = masterNationData.find(n => n.th.toLowerCase() === rawNation.toLowerCase() || n.en.toLowerCase() === rawNation.toLowerCase());
+            
+            if (currentMode === 'rr4') {
+                const isThai = /[ก-๙]/.test(fName);
+                const codeRr4 = mappingMatch ? mappingMatch.rr4 : "97";
+                let tTh = "", nTh = "", sTh = "", tEn = "", nEn = "", sEn = "";
+                if (isThai) {
+                    tTh = (sex === 'male' || sex === 'm') ? 'นาย' : 'นางสาว'; nTh = fName; sTh = lName;
+                } else {
+                    tEn = (sex === 'male' || sex === 'm') ? 'Mr.' : 'Ms.'; nEn = fName; sEn = lName;
+                }
+                tableWorkingRows.push([
+                    i + 1, cleanDateFormat(row["Check In"]), "14.00", row["Room"] || "",
+                    tTh, nTh, "", sTh, tEn, nEn, "", sEn, codeRr4, 
+                    (row["Citizen Id"] === "-" ? "" : row["Citizen Id"]) || "",
+                    (row["Passport No."] === "-" ? "" : row["Passport No."]) || "", "",
+                    "ประเทศไทย", "99", "146", "ประเทศไทย", "99", "ประเทศไทย", "99",
+                    cleanDateFormat(row["Check Out"]), "12.00", "", ""
+                ]);
+            } else {
+                if (mappingMatch && mappingMatch.tm30 === "THA") return; 
+                const codeTm30 = mappingMatch ? mappingMatch.tm30 : rawNation.toUpperCase();
+                const genLabel = (sex === 'male' || sex === 'm') ? 'M' : (sex === 'female' || sex === 'f') ? 'F' : '';
+                tableWorkingRows.push([
+                    fName, "", lName, genLabel,
+                    (row["Passport No."] === "-" ? "" : row["Passport No."]) || "",
+                    codeTm30, cleanDateFormat(row["Date of Birth"]),
+                    cleanDateFormat(row["Check Out"]), ""
+                ]);
+            }
+        });
+        renderOutputTable();
+    }
+
+    function renderOutputTable() {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = "";
+        if (tableWorkingRows.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="${headersConfig[currentMode].length}" style="text-align: center; color: var(--text-muted); padding: 50px;">ไม่มีข้อมูลแสดงผลในหมวดนี้</td></tr>`;
+            return;
+        }
+        tableWorkingRows.forEach((row, rIdx) => {
+            const tr = document.createElement('tr');
+            row.forEach((cell, cIdx) => {
+                const td = document.createElement('td');
+                if (currentMode === 'rr4' && cIdx === 0) {
+                    td.innerHTML = `<strong>${cell}</strong>`;
+                } else {
+                    td.innerHTML = `<input type="text" value="${cell}" onchange="editCellData(${rIdx}, ${cIdx}, this.value)">`;
+                }
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+    }
+
+    function editCellData(r, c, val) {
+        if (tableWorkingRows[r]) tableWorkingRows[r][c] = val;
+    }
+
+    function triggerDownload() {
+        if (tableWorkingRows.length === 0) return;
+        
+        if (currentMode === 'rr4') {
+            const checkInDate = tableWorkingRows[0][1] || "export";
+            const excelRows = [
+                ["", "", "", "", "", "", "", "", "", "", "", "ทะเบียนผู้เข้าพักในโรงแรม", "", "", "", "", "", "", "", "", "", "", "", "", "", "ร.ร.๔"],
+                ["", "", "", "", "", "", "", "", "", "", "", "ประจำวันที่", "", checkInDate, "", "", "", "", "", "", "", "", "", "", "", ""],
+                headersConfig.rr4,
+                ["rowNo", "dateCheckIn", "timeCheckIn", "roomNo", "titleNameTh", "nameTh", "middleNameTh", "surnameTh", "titleNameEn", "nameEn", "middleNameEn", "surnameEn", "nationality", "pid", "passport", "issuedBy", "address", "addressCountry", "occupation", "comeFrom", "comeFromCountry", "willGo", "willGoCountry", "dateCheckOut", "timeCheckOut", "dataStatus", "remarks"]
+            ];
+            tableWorkingRows.forEach(r => excelRows.push(r));
+            const ws = XLSX.utils.aoa_to_sheet(excelRows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "รร.4");
+            XLSX.writeFile(wb, `ทะเบียนผู้เข้าพัก_รร4_${checkInDate.replace(/\//g, "-")}.xlsx`);
+        } else {
+            const tm30Rows = [ headersConfig.tm30 ];
+            tableWorkingRows.forEach(r => tm30Rows.push(r));
+            
+            const ws = XLSX.utils.aoa_to_sheet(tm30Rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+            
+            XLSX.writeFile(wb, "Immigration_Form_A.xls", { bookType: 'biff8', type: 'binary' });
+        }
+    }
+
+    updateGuideAndLabels();
+    renderHeaderOnly();
+</script>
+
+</body>
+</html>
